@@ -184,7 +184,6 @@ UI_BLACKLIST = [
     "Terms of Service"
 ]
 
-# TODO: For now, this is focused on Rappler only
 def _fetch_urls_from_sitemap(sitemap_url: str, url_filter: Callable[[str], bool], retries: int = 4, base_delay: float = 5.0) -> list[str]:
     # Download one sitemap XML and return all article URLs that pass the filter
     print(f"Fetching sitemap: {sitemap_url}")
@@ -646,9 +645,9 @@ def scrape_site(config: SiteConfig, n: int, request_delay: float = 0.75, max_dis
 
 if __name__ == "__main__":
     # TODO: Change to True or False depending on if you want to only get a few articles
-    TEST_MODE = True
+    TEST_MODE = False
 
-    TARGET_PER_SITE = 10 if TEST_MODE else 5_000
+    TARGET_PER_SITE = 10 if TEST_MODE else 1000
     MAX_DISCOVERY = 2 if TEST_MODE else None
 
     SITES_TO_SCRAPE: list[Site] = [
