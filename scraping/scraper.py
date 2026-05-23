@@ -5,12 +5,30 @@ import random
 import requests
 from bs4 import BeautifulSoup
 from pprint import pprint
+from dataclasses import dataclass
+from typing import Callable, Literal
+
+# Types
+Site = Literal['Rappler', 'ABSCBN', 'GMA']
+
+@dataclass
+class SiteConfig:
+    name: str
+    sitemap_urls: list[str]
+    url_filter: Callable[[str], bool]
+    title_selector: str
+    body_selector: str
+    urls_file: str
+    articles_file: str
+    scraped_urls_file: str
 
 # TODO: For now, this is focused on Rappler only
-def get_article_urls(sitemap_url: str, max_urls=10000) -> list[str]:
+def get_article_urls(site: Site,
+                     sitemap_url: str,
+                     max_urls=10000) -> list[str]:
     print(f"Fetching sitemap: {sitemap_url}")
 
-    # this is to disguise the bot daw
+    # this is to disguise the bot
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
     response = requests.get(sitemap_url, headers=headers)
@@ -72,6 +90,7 @@ def scrape_rappler_urls():
         rappler_urls.write('\n'.join(urls))
 
 def scrape_rappler_articles(n=1000):
+    # TODO: Ideally we would take the first 30 words then determine their language
     urls = []
     with open("rappler_urls.txt", 'r', encoding="utf-8") as rappler_urls:
         while True:
