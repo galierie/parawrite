@@ -1,9 +1,5 @@
 <script lang="ts">
-    let value = $state('');
-
-    const gridCell = 'row-start-1 col-start-1';
-    const textareaStyle =
-        'border-0 p-0 text-base leading-6 focus:ring-0 w-full text-wrap wrap-break-word';
+    import { TextEditorComponent } from '$lib/features/text-editor';
 </script>
 
 <div class="mb-24 text-center text-grandis-100">
@@ -15,13 +11,6 @@
     <div
         class="grid min-h-[297mm] w-[210mm] grid-cols-1 bg-white p-6 text-black shadow-lg shadow-black sm:p-12 lg:p-24"
     >
-        <div class="invisible whitespace-pre-wrap {gridCell} {textareaStyle}" aria-hidden="true">
-            {value}
-        </div>
-        <textarea
-            placeholder="Enter your text here"
-            class="resize-none overflow-hidden {gridCell} {textareaStyle}"
-            bind:value
-        ></textarea>
+        <TextEditorComponent />
     </div>
 </div>
