@@ -1,5 +1,3 @@
 import Component from './component.svelte';
 
-export {
-  Component as TextEditorComponent,
-}
+export { Component as TextEditorComponent };
