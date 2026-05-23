@@ -12,8 +12,18 @@
 
   const starterKitExtensionsConfig: Partial<StarterKitOptions> = {
     blockquote: false,
+    bulletList: {
+      HTMLAttributes: {
+        class: 'list-disc pl-6',
+      },
+    },
     dropcursor: false,
     horizontalRule: false,
+    orderedList: {
+      HTMLAttributes: {
+        class: 'list-decimal pl-6',
+      },
+    },
   };
 
   function mountEditor() {
