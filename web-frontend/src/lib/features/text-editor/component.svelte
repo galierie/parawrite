@@ -4,6 +4,7 @@
   import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
   import { CtrlKLink, setLink } from './extensions/ctrl-k-link';
   import Icon from '@iconify/svelte';
+  import TextAlign from '@tiptap/extension-text-align';
 
   interface EditorState {
     editor: Editor | null;
@@ -38,6 +39,10 @@
           HTMLAttributes: {
             class: 'underline',
           }
+        }),
+        TextAlign.configure({
+          types: ['paragraph'],
+          defaultAlignment: 'left',
         }),
       ],
       editorProps: {
@@ -88,6 +93,11 @@
         <Icon icon="tabler:minus-vertical" class="text-gray-400 h-6 w-6" />
         {@render formatBtn('list', () => (editor.chain().focus().toggleBulletList().run()))}
         {@render formatBtn('list-numbers', () => (editor.chain().focus().toggleOrderedList().run()))}
+        <Icon icon="tabler:minus-vertical" class="text-gray-400 h-6 w-6" />
+        {@render formatBtn('align-left', () => (editor.chain().focus().setTextAlign('left').run()))}
+        {@render formatBtn('align-center', () => (editor.chain().focus().setTextAlign('center').run()))}
+        {@render formatBtn('align-right', () => (editor.chain().focus().setTextAlign('right').run()))}
+        {@render formatBtn('align-justified', () => (editor.chain().focus().setTextAlign('justify').run()))}
       </div>
     </div>
   {/if}
