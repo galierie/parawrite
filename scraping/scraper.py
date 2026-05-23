@@ -4,23 +4,171 @@ import json
 import random
 import requests
 from bs4 import BeautifulSoup
-from pprint import pprint
 from dataclasses import dataclass
 from typing import Callable, Literal
 
 # Types
 Site = Literal['Rappler', 'ABSCBN', 'GMA']
 
+# Site Configuration
+
+@dataclass
+class ApiSectionConfig:
+    base_url: str
+    fixed_params: dict
+    section_id: str
+    article_filter: Callable[[dict], bool]
+    url_field: str
+    url_prefix: str
+    limit: int = 100
+
 @dataclass
 class SiteConfig:
     name: str
-    sitemap_urls: list[str]
-    url_filter: Callable[[str], bool]
+    url_source: Literal["sitemap", "rss", "id_range", "category_pages", "api"]
     title_selector: str
     body_selector: str
     urls_file: str
     articles_file: str
     scraped_urls_file: str
+
+    # Used when url_source == "sitemap"
+    sitemap_urls: list[str] | None = None
+    url_filter: Callable[[str], bool] | None = None
+
+    # Used when url_source == "rss"
+    rss_feeds: list[str] | None = None
+
+    # Used when url_source == "id_range"
+    # GMA article URLs follow: /news/{category}/{id}/{slug}/story/
+    id_range_base_url: str | None = None  # e.g. "https://www.gmanetwork.com/news/story/{id}"
+    id_range_start: int | None = None
+    id_range_end: int | None = None
+
+    # Used when url_source == "category_pages"
+    # For sites whose sitemaps are rolling (only show recent articles).
+    # We instead crawl paginated section/category listing pages and extract
+    # article links from each page until we run out of pages or hit max_pages.
+    category_page_configs: list["CategoryPageConfig"] | None = None
+    
+    # Used when url_source == "api"
+    # For sites that expose a JSON REST API for article listings
+    api_configs: list["ApiSectionConfig"] | None = None
+
+@dataclass
+class CategoryPageConfig:
+    page_url_template: str
+    article_link_selector: str
+    start_page: int = 1
+    max_pages: int = 300
+
+def _rappler_filter(url: str) -> bool:
+    return (
+        "rappler-prod-01" not in url
+        and url[-4] != "."
+        and ".jpg" not in url.lower()
+        and ".png" not in url.lower()
+        and ".gif" not in url.lower()
+        and "go.rappler" not in url
+        and "r3-assets" not in url
+        and "r5-assets" not in url
+        and "static.rappler.com" not in url
+        and url != "https://www.rappler.com/latest/"
+    )
+
+
+def _abscbn_filter(url: str) -> bool:
+    # TODO: Inspect ABS-CBN sitemap output and refine these filters if needed.
+    return (
+        "www.abs-cbn.com" in url
+        and ".jpg" not in url.lower()
+        and ".png" not in url.lower()
+        and ".gif" not in url.lower()
+        and "/video" not in url
+        and "/photo" not in url
+        and "/schedule" not in url
+        and url.count("/") >= 5  # real articles have at least 5 slashes in path
+    )
+
+# Sitemaps
+def _rappler_sitemaps() -> list[str]:
+    # Rappler's sitemaps are numbered post-sitemap.xml through post-sitemap380.xml
+    urls = ["https://www.rappler.com/post-sitemap.xml"]
+    for i in range(2, 381):
+        urls.append(f"https://www.rappler.com/post-sitemap{i}.xml")
+    return urls
+
+# Excluded money, sports, lifestyle, entertainment
+GMA_RSS_FEEDS = [
+    "https://data.gmanetwork.com/gno/rss/news/feed.xml",
+    "https://data.gmanetwork.com/gno/rss/news/nation/feed.xml",
+    "https://data.gmanetwork.com/gno/rss/news/world/feed.xml",
+    "https://data.gmanetwork.com/gno/rss/news/specialreports/feed.xml",
+]
+
+# Site configs
+SITE_CONFIGS: dict[str, SiteConfig] = {
+    "Rappler": SiteConfig(
+        name="Rappler",
+        url_source="sitemap",
+        sitemap_urls=_rappler_sitemaps(),
+        url_filter=_rappler_filter,
+        title_selector=".post-single__title",
+        body_selector=".post-single__content p",
+        urls_file="rappler_urls.txt",
+        articles_file="rappler_articles.jsonl",
+        scraped_urls_file="rappler_scraped_urls.txt",
+    ),
+    "ABSCBN": SiteConfig(
+        name="ABSCBN",
+        url_source="api",
+        api_configs=[
+            ApiSectionConfig(
+                base_url="https://od2-content-api.abs-cbn.com/prod/latest",
+                fixed_params={"brand": "OD", "partner": "imp-01"},
+                section_id="nation",
+                article_filter=lambda item: item.get("profile") == "Article",
+                url_field="slugline_url",
+                url_prefix="https://www.abs-cbn.com/",
+                limit=100,
+            ),
+            ApiSectionConfig(
+                base_url="https://od2-content-api.abs-cbn.com/prod/latest",
+                fixed_params={"brand": "OD", "partner": "imp-01"},
+                section_id="world",
+                article_filter=lambda item: item.get("profile") == "Article",
+                url_field="slugline_url",
+                url_prefix="https://www.abs-cbn.com/",
+                limit=100,
+            ),
+        ],
+        title_selector="h1.MuiTypography-root",
+        body_selector="#bodyTopPart",
+        urls_file="abscbn_urls.txt",
+        articles_file="abscbn_articles.jsonl",
+        scraped_urls_file="abscbn_scraped_urls.txt",
+    ),
+    "GMA": SiteConfig(
+        name="GMA",
+        url_source="id_range",
+        rss_feeds=GMA_RSS_FEEDS,
+        id_range_base_url="https://www.gmanetwork.com/news/story/{id}",
+        id_range_start=700_000,
+        id_range_end=951_500,           # TODO: update as new articles are published
+        title_selector="h1.story_links",
+        body_selector=".story_main",
+        urls_file="gma_urls.txt",
+        articles_file="gma_articles.jsonl",
+        scraped_urls_file="gma_scraped_urls.txt",
+    ),
+}
+
+DEFAULT_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) "
+        "Gecko/20100101 Firefox/117.0"
+    )
+}
 
 # TODO: For now, this is focused on Rappler only
 def get_article_urls(site: Site,
