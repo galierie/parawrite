@@ -46,6 +46,7 @@
         "vite": "^8.0.14"
     },
     "dependencies": {
-        "@tiptap/core": "^3.23.6"
+        "@tiptap/core": "^3.23.6",
+        "@tiptap/starter-kit": "^3.23.6"
     }
 }
