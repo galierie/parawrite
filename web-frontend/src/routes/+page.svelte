@@ -9,7 +9,7 @@
 
 <div class="flex justify-center">
     <div
-        class="grid min-h-[297mm] w-[210mm] grid-cols-1 bg-white p-6 text-black shadow-lg shadow-black sm:p-12 lg:p-24"
+        class="relative min-h-[297mm] w-[210mm] bg-white p-6 text-black shadow-lg shadow-black sm:p-12 lg:p-24"
     >
         <TextEditorComponent />
     </div>
