@@ -6,6 +6,12 @@
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
 
     import { CtrlKLink, setLink } from './extensions/ctrl-k-link';
+    
+    interface Props {
+        text: string;
+    }
+
+    let { text = $bindable() }: Props = $props();
 
     interface EditorState {
         editor: Editor | null;
@@ -55,6 +61,10 @@
                 // Update the state signal to force a re-render
                 editorState = { editor };
             },
+            onUpdate({ editor }) {
+                // No initial content naman, so this should work
+                text = editor.getText();
+            }
         });
     }
 

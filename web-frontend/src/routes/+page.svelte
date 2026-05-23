@@ -1,5 +1,7 @@
 <script lang="ts">
     import { TextEditorComponent } from '$lib/features/text-editor';
+
+    let text = $state('');
 </script>
 
 <div class="mb-24 text-center text-grandis-100">
@@ -11,6 +13,6 @@
     <div
         class="relative min-h-[297mm] w-[210mm] bg-white p-6 text-black shadow-lg shadow-black sm:p-12 lg:p-24"
     >
-        <TextEditorComponent />
+        <TextEditorComponent bind:text />
     </div>
 </div>
