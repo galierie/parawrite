@@ -9,7 +9,9 @@ MODEL_PATH = '../model/ModernBERT-base-finetuned-rappler'
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.model = AutoModelForMaskedLM.from_pretrained(MODEL_PATH) # type: ignore
+    model = AutoModelForMaskedLM.from_pretrained(MODEL_PATH) # type: ignore
+    model.eval()
+    app.state.model = model
     app.state.tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH) # type: ignore
     yield
 
