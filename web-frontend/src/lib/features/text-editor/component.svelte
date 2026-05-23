@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { Editor } from '@tiptap/core';
   import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
+  import { CtrlKLink } from './extensions/ctrl-k-link';
 
   interface EditorState {
     editor: Editor | null;
@@ -19,6 +20,7 @@
     },
     dropcursor: false,
     horizontalRule: false,
+    link: false,
     orderedList: {
       HTMLAttributes: {
         class: 'list-decimal pl-6',
@@ -31,6 +33,11 @@
       element: editorElement,
       extensions: [
         StarterKit.configure(starterKitExtensionsConfig),
+        CtrlKLink.configure({
+          HTMLAttributes: {
+            class: 'underline',
+          }
+        }),
       ],
       editorProps: {
         attributes: {
