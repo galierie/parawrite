@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { Editor } from '@tiptap/core';
-  import { StarterKit } from '@tiptap/starter-kit';
+  import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
 
   interface EditorState {
     editor: Editor | null;
@@ -10,11 +10,17 @@
   let editorState: EditorState = $state({ editor: null });
   let editorElement: HTMLDivElement | null = $state(null);
 
+  const starterKitExtensionsConfig: Partial<StarterKitOptions> = {
+    blockquote: false,
+    dropcursor: false,
+    horizontalRule: false,
+  };
+
   function mountEditor() {
     editorState.editor = new Editor({
       element: editorElement,
       extensions: [
-        StarterKit,
+        StarterKit.configure(starterKitExtensionsConfig),
       ],
       editorProps: {
         attributes: {
