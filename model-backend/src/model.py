@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from transformers import PreTrainedModel, PreTrainedTokenizerFast
+import torch
 from torch.nn.functional import softmax
 
 class WordResult(BaseModel):
@@ -17,8 +18,9 @@ def recommend_by_batch(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFas
         raise IndexError(f'Number of [MASK]s and number of synonym groups are not equal.')
     
     # Score against the model's entire vocabulary
-    model_output = model(**input_tokens)
-    # TODO: Add reasoning
+    with torch.no_grad():
+        model_output = model(**input_tokens)
+        # TODO: Add reasoning
 
     def get_synonym_group_probabilities(item: tuple[int, list[str]]):
         idx, group = item
