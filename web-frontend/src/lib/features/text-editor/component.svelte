@@ -10,11 +10,11 @@
     import { CtrlKLink, setLink, SynonymGroupNode } from './extensions';
     
     interface Props {
-        doc: EditorState['doc'];
+        edState: EditorState;
         view: EditorView;
     }
 
-    let { doc = $bindable(), view = $bindable() }: Props = $props();
+    let { edState = $bindable(), view = $bindable() }: Props = $props();
 
     let editorState: { editor: Editor | null } = $state({ editor: null });
     let editorElement: HTMLDivElement | null = $state(null);
@@ -67,7 +67,7 @@
             },
             onUpdate({ editor }) {
                 // No initial content naman, so this should work
-                doc = editor.state.doc;
+                edState = editor.state;
                 view = editor.view;
             }
         });

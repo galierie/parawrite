@@ -3,7 +3,7 @@
     import { EditorView } from '@tiptap/pm/view';
     import { TextEditorComponent } from '$lib/features/text-editor';
 
-    let doc: EditorState['doc'] = $state({} as EditorState['doc']);
+    let edState: EditorState = $state({} as EditorState);
     let view: EditorView = $state({} as EditorView);
 </script>
 
@@ -16,6 +16,6 @@
     <div
         class="relative min-h-[297mm] w-[210mm] bg-white p-6 text-black shadow-lg shadow-black sm:p-12 lg:p-24"
     >
-        <TextEditorComponent bind:doc bind:view />
+        <TextEditorComponent bind:edState bind:view />
     </div>
 </div>
