@@ -6,6 +6,7 @@
     import { EditorView } from '@tiptap/pm/view';
     import { onDestroy, onMount } from 'svelte';
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
+    import UniqueID from '@tiptap/extension-unique-id';
 
     import { CtrlKLink, SynonymGroupNode, setLink } from './extensions';
 
@@ -55,6 +56,11 @@
                     HTMLAttributes: {
                         class: 'bg-grandis-100',
                     },
+                }),
+                UniqueID.configure({
+                    types: ['synonymGroup'],
+                    attributeName: 'id',
+                    generateID: () => (crypto.randomUUID()),
                 }),
             ],
             editorProps: {

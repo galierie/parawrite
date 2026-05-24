@@ -72,7 +72,7 @@ export const SynonymGroupNode = Node.create({
     addAttributes() {
         return {
             id: {
-                default: crypto.randomUUID(),
+                default: null,
                 parseHTML: (element) => element.getAttribute('data-id'),
                 renderHTML: (attrs) => ({ 'data-id': attrs.id }),
             },
