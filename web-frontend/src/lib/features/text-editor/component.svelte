@@ -13,11 +13,7 @@
 
     let { text = $bindable() }: Props = $props();
 
-    interface EditorState {
-        editor: Editor | null;
-    }
-
-    let editorState: EditorState = $state({ editor: null });
+    let editorState: { editor: Editor | null } = $state({ editor: null });
     let editorElement: HTMLDivElement | null = $state(null);
 
     const starterKitExtensionsConfig: Partial<StarterKitOptions> = {
