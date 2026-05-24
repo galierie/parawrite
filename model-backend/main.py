@@ -5,7 +5,7 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 
 from src.model import SynonymGroupRequest, SynonymGroupResult, WordResult, recommend_by_batch
 
-MODEL_PATH = '../model/ModernBERT-base-finetuned-rappler'
+MODEL_PATH = '../model/ModernBERT-base-finetuned-all'
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

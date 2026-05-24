@@ -16,8 +16,23 @@ class SynonymGroupResult(BaseModel):
     id: str
     results: list[WordResult]
 
+
+def bert_infer(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, text: str):
+    tokenized = tokenizer(text, return_tensors="pt")
+    logits = model(**tokenized).logits
+    mask_token_index = torch.where(tokenized["input_ids"] == tokenizer.mask_token_id)[1]
+    mask_token_logits = logits[0, mask_token_index, :]
+    best = mask_token_logits[0].argmax(dim=-1).item()
+
+
+    token_text = tokenizer.decode([best]).strip()
+    return token_text
+
+    
+
+
 def recommend_by_batch(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, synonym_groups: list[SynonymGroupRequest], text: str) -> list[SynonymGroupResult]:
-    input_tokens = tokenizer(text, return_tensors="pt")
+    input_tokens = tokenizer(text, return_tensors="pt", return_offsets_mapping=True)
 
     # Get [MASK] indexes in text
     mask_text_indexes = (input_tokens.input_ids == tokenizer.mask_token_id).nonzero(as_tuple=False)
@@ -59,7 +74,10 @@ def recommend_by_batch(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFas
                 results.append(WordResult(word=word, score=0, reason=''))
                 continue
 
-            results.append(WordResult(word=word, score=scores[word_token_id].item(), reason=''))
+            # TODO use surrounding text as context
+            reason = bert_infer(model, tokenizer, f"The word {word} should be more fitting for the sentence as it has the best [MASK]")
+
+            results.append(WordResult(word=word, score=scores[word_token_id].item(), reason=f"{word} is the best pick as it has the best {reason}"))
         
         return SynonymGroupResult(id=request.id, results=results)
 
