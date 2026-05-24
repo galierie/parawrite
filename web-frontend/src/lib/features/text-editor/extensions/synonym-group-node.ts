@@ -1,4 +1,4 @@
-import { mergeAttributes, Node } from '@tiptap/core';
+import { InputRule, mergeAttributes, Node } from '@tiptap/core';
 import { number, parse, record, string, type InferOutput } from 'valibot';
 
 const tag = 'span';
@@ -29,6 +29,26 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
   atom: false,
   content: 'text*',
   selectable: true,
+
+  addInputRules() {
+    return [
+      new InputRule({
+        find: /(?:^|\s)([\w-]+(?:\|[\w-]+)+)\s$/,
+        handler: ({ state, range, match }) => {
+          const content = match[1];
+
+          // Make a node with the captured text
+          const node = state.schema.nodes.synonymGroupNode.create({}, state.schema.text(content));
+          
+          // Limit range to that of captured text
+          const from = range.to - content.length - 1;
+          const to = range.from + content.length;
+
+          state.tr.replaceRangeWith(from, to, node);
+        },
+      }),
+    ];
+  },
 
   addOptions() {
     return {
