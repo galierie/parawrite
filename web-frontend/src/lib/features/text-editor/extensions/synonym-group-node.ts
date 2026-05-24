@@ -137,7 +137,7 @@ export const SynonymGroupNode = Node.create({
  * Formats the synonym groups into lists.
  */
 export function getSynonymGroups(doc: EditorState['doc']) {
-  const synonymGroups: Array<Array<string>> = [];
+  const synonymGroups: Array<{ id: string, words: Array<string>}> = [];
   const finalText: Array<string> = [];
 
   doc.descendants((node) => {
@@ -148,12 +148,12 @@ export function getSynonymGroups(doc: EditorState['doc']) {
       if (!synonymGroupStr.includes('|'))
         finalText.push(synonymGroupStr);
 
-      const synonymGroup = synonymGroupStr
+      const words = synonymGroupStr
         .split('|')
         .map((word) => (word.trim()))
         .filter(Boolean);
 
-      synonymGroups.push(synonymGroup);
+      synonymGroups.push({ id: node.attrs.id, words });
       finalText.push('[MASK]');
 
       return false;
