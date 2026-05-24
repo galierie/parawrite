@@ -1,8 +1,10 @@
 <script lang="ts">
     import { EditorState } from '@tiptap/pm/state';
+    import { EditorView } from '@tiptap/pm/view';
     import { TextEditorComponent } from '$lib/features/text-editor';
 
     let doc: EditorState['doc'] = $state({} as EditorState['doc']);
+    let view: EditorView = $state({} as EditorView);
 </script>
 
 <div class="mb-24 text-center text-grandis-100">
@@ -14,6 +16,6 @@
     <div
         class="relative min-h-[297mm] w-[210mm] bg-white p-6 text-black shadow-lg shadow-black sm:p-12 lg:p-24"
     >
-        <TextEditorComponent bind:doc />
+        <TextEditorComponent bind:doc bind:view />
     </div>
 </div>

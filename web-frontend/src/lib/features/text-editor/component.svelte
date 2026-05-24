@@ -3,6 +3,7 @@
     import TextAlign from '@tiptap/extension-text-align';
     import { Editor } from '@tiptap/core';
     import { EditorState } from '@tiptap/pm/state';
+    import { EditorView } from '@tiptap/pm/view';
     import { onDestroy, onMount } from 'svelte';
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
 
@@ -10,9 +11,10 @@
     
     interface Props {
         doc: EditorState['doc'];
+        view: EditorView;
     }
 
-    let { doc = $bindable() }: Props = $props();
+    let { doc = $bindable(), view = $bindable() }: Props = $props();
 
     let editorState: { editor: Editor | null } = $state({ editor: null });
     let editorElement: HTMLDivElement | null = $state(null);
@@ -66,6 +68,7 @@
             onUpdate({ editor }) {
                 // No initial content naman, so this should work
                 doc = editor.state.doc;
+                view = editor.view;
             }
         });
     }
