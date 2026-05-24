@@ -567,11 +567,13 @@ async def scrape_article_async(session: aiohttp.ClientSession, url: str, config:
                     if k in ("articleBody", "text", "content", "body") and isinstance(v, str) and len(v) > 100:
                         return v
                     res = extract_schema_body(v)
-                    if res: return res
+                    if res:
+                        return res
             elif isinstance(obj, list):
                 for item in obj:
                     res = extract_schema_body(item)
-                    if res: return res
+                    if res:
+                        return res
             return None
 
         for script in soup.find_all("script", type="application/ld+json"):
@@ -653,7 +655,7 @@ async def scrape_site_async(
 
     timeout = aiohttp.ClientTimeout(total=20)
     connector = aiohttp.TCPConnector(limit=concurrency, ssl=False)
-    
+
     async def process_item(session: aiohttp.ClientSession, item) -> None:
         nonlocal success_count
 
@@ -703,6 +705,7 @@ if __name__ == "__main__":
     # TODO: Change to True or False depending on if you want to only get a few articles
     TEST_MODE = False
 
+    # TODO: Modify how many articles to scrape
     TARGET_PER_SITE = 10 if TEST_MODE else 6000
     MAX_DISCOVERY = 2 if TEST_MODE else None
 
