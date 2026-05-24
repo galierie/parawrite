@@ -44,9 +44,8 @@ function replaceWithSynonymGroup({ state, range, match }: { state: EditorState, 
   tr.insertText(' ', range.from + node.nodeSize - 1);
 
   // Reinsert the missing whitespace as well
-  if (range.from !== 1) {
+  if (range.from !== 1)
     tr.insertText(' ', range.from);
-  }
 
   return;
 }
