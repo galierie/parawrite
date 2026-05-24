@@ -8,6 +8,9 @@ const group = 'inline';
 const ScoreSchema = record(string(), number());
 type Score = InferOutput<typeof ScoreSchema>;
 
+const ReasonSchema = record(string(), number());
+type Reason = InferOutput<typeof ReasonSchema>;
+
 /**
  * SynonymGroupNode has two options:
  *   id: identifies which <span> contains the synonym group
@@ -16,6 +19,7 @@ type Score = InferOutput<typeof ScoreSchema>;
 interface SynonymGroupOptions {
   id: string;
   scores: Score;
+  reasons: Reason;
   HTMLAttributes: {
     class?: string;
   };
@@ -87,6 +91,7 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
     return {
       id: crypto.randomUUID(),
       scores: {},
+      reasons: {},
       HTMLAttributes: {},
     };
   },
@@ -100,9 +105,14 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
           const scoresStr = element.getAttribute('data-scores');
           const scores = parse(ScoreSchema, JSON.parse(JSON.stringify(scoresStr)));
 
+          // Parse reasons
+          const reasonsStr = element.getAttribute('data-reasons');
+          const reasons = parse(ReasonSchema, JSON.parse(JSON.stringify(reasonsStr)));
+
           return {
             id: element.getAttribute('data-id'),
             scores,
+            reasons,
           }
         }
       },
@@ -119,6 +129,7 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
           'data-synonym-group': true,
           'data-id': this.options.id,
           'data-scores': JSON.stringify(this.options.scores),
+          'data-reasons': JSON.stringify(this.options.reasons),
         },
       ),
       0,
