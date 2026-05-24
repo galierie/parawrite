@@ -5,8 +5,8 @@ import { number, parse, record, string, type InferOutput } from 'valibot';
 const tag = 'span';
 const group = 'inline';
 
-const RankingSchema = record(string(), number());
-type Ranking = InferOutput<typeof RankingSchema>;
+const ScoreSchema = record(string(), number());
+type Score = InferOutput<typeof ScoreSchema>;
 
 /**
  * SynonymGroupNode has two options:
@@ -15,7 +15,7 @@ type Ranking = InferOutput<typeof RankingSchema>;
  */
 interface SynonymGroupOptions {
   id: string;
-  rankings: Ranking;
+  scores: Score;
   HTMLAttributes: {
     class?: string;
   };
@@ -86,7 +86,7 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
   addOptions() {
     return {
       id: crypto.randomUUID(),
-      rankings: {},
+      scores: {},
       HTMLAttributes: {},
     };
   },
@@ -96,13 +96,13 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
       {
         tag: `${tag}[data-synonym-group]`,
         getAttrs: (element: HTMLSpanElement) => {
-          // Parse rankings
-          const rankingsStr = element.getAttribute('data-rankings');
-          const rankings = parse(RankingSchema, JSON.parse(JSON.stringify(rankingsStr)));
+          // Parse scores
+          const scoresStr = element.getAttribute('data-scores');
+          const scores = parse(ScoreSchema, JSON.parse(JSON.stringify(scoresStr)));
 
           return {
             id: element.getAttribute('data-id'),
-            rankings,
+            scores,
           }
         }
       },
@@ -118,7 +118,7 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
         {
           'data-synonym-group': true,
           'data-id': this.options.id,
-          'data-rankings': JSON.stringify(this.options.rankings),
+          'data-scores': JSON.stringify(this.options.scores),
         },
       ),
       0,
