@@ -1,4 +1,5 @@
-import { InputRule, mergeAttributes, Node } from '@tiptap/core';
+import { InputRule, mergeAttributes, Node, type ExtendedRegExpMatchArray, type Range } from '@tiptap/core';
+import { EditorState } from '@tiptap/pm/state';
 import { number, parse, record, string, type InferOutput } from 'valibot';
 
 const tag = 'span';
@@ -17,6 +18,20 @@ interface SynonymGroupOptions {
   rankings: Ranking;
 }
 
+const synonymGroupPattern: RegExp = /([\w-]+(?:\|[\w-]+)+)/;
+function replaceWithSynonymGroup({ state, range, match }: { state: EditorState, range: Range, match: ExtendedRegExpMatchArray }) {
+  const content = match[1];
+
+  // Make a node with the captured text
+  const node = state.schema.nodes.synonymGroupNode.create({}, state.schema.text(content));
+
+  // Limit range to that of captured text
+  const from = range.to - content.length - 1;
+  const to = range.from + content.length;
+
+  state.tr.replaceRangeWith(from, to, node);
+}
+
 /**
  * SynonymGroupNode contains the entire synonym group.
  */
@@ -33,19 +48,8 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
   addInputRules() {
     return [
       new InputRule({
-        find: /(?:^|\s)([\w-]+(?:\|[\w-]+)+)\s$/,
-        handler: ({ state, range, match }) => {
-          const content = match[1];
-
-          // Make a node with the captured text
-          const node = state.schema.nodes.synonymGroupNode.create({}, state.schema.text(content));
-          
-          // Limit range to that of captured text
-          const from = range.to - content.length - 1;
-          const to = range.from + content.length;
-
-          state.tr.replaceRangeWith(from, to, node);
-        },
+        find: new RegExp(`/(?:^|\s)${synonymGroupPattern.source}\s$/`),
+        handler: replaceWithSynonymGroup,
       }),
     ];
   },
