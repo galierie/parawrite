@@ -16,6 +16,9 @@ type Ranking = InferOutput<typeof RankingSchema>;
 interface SynonymGroupOptions {
   id: string;
   rankings: Ranking;
+  HTMLAttributes: {
+    class?: string;
+  };
 }
 
 const synonymGroupPattern: RegExp = /([\w-]+(?:\|[\w-]+)+)/;
@@ -85,6 +88,7 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
     return {
       id: crypto.randomUUID(),
       rankings: {},
+      HTMLAttributes: {},
     };
   },
 
@@ -111,6 +115,7 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
       tag,
       mergeAttributes(
         HTMLAttributes,
+        this.options.HTMLAttributes,
         {
           'data-synonym-group': true,
           'data-id': this.options.id,
