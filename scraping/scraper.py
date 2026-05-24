@@ -706,13 +706,13 @@ if __name__ == "__main__":
     TEST_MODE = False
 
     # TODO: Modify how many articles to scrape
-    TARGET_PER_SITE = 10 if TEST_MODE else 6000
+    TARGET_PER_SITE = 10 if TEST_MODE else 100
     MAX_DISCOVERY = 2 if TEST_MODE else None
 
     SITES_TO_SCRAPE: list[Site] = [
         # "Rappler",
-        # "ABSCBN",
-        "GMA",
+        "ABSCBN",
+        # "GMA",
         # "UPParserNew",
         # "UPParserOld",
     ]
