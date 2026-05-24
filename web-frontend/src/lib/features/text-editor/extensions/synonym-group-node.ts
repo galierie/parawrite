@@ -1,3 +1,4 @@
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
 import {
     type ExtendedRegExpMatchArray,
@@ -8,8 +9,7 @@ import {
     PasteRule,
     type Range,
 } from '@tiptap/core';
-import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { number, parse, record, string, type InferOutput } from 'valibot';
+import { type InferOutput, number, parse, record, string } from 'valibot';
 
 const tag = 'span';
 const group = 'inline';
@@ -189,7 +189,7 @@ export const SynonymDecorator = Extension.create({
                         return this.options.decorateSynonyms(doc);
                     },
                     apply: (tr, prev) => {
-                        return (tr.docChanged)
+                        return tr.docChanged
                             ? this.options.decorateSynonyms(tr.doc)
                             : prev.map(tr.mapping, tr.doc);
                     },
@@ -236,11 +236,9 @@ export const SynonymDecorator = Extension.create({
 
                             decorations.push(
                                 Decoration.inline(from, to, {
-                                    class: (score === highestScore)
-                                        ? 'bg-my-sin'
-                                        : 'bg-mandalay',
+                                    class: score === highestScore ? 'bg-my-sin' : 'bg-mandalay',
                                     title: reason,
-                                })
+                                }),
                             );
 
                             posOffset += rawStr.length + 1;

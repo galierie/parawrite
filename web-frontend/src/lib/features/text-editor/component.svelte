@@ -1,12 +1,12 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import TextAlign from '@tiptap/extension-text-align';
+    import UniqueID from '@tiptap/extension-unique-id';
     import { Editor } from '@tiptap/core';
     import { EditorState } from '@tiptap/pm/state';
     import { EditorView } from '@tiptap/pm/view';
     import { onDestroy, onMount } from 'svelte';
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
-    import UniqueID from '@tiptap/extension-unique-id';
 
     import { CtrlKLink, SynonymDecorator, SynonymGroupNode, setLink } from './extensions';
 
@@ -60,7 +60,7 @@
                 UniqueID.configure({
                     types: ['synonymGroup'],
                     attributeName: 'id',
-                    generateID: () => (crypto.randomUUID()),
+                    generateID: () => crypto.randomUUID(),
                 }),
                 SynonymDecorator,
             ],
