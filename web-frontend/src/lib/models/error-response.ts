@@ -1,8 +1,8 @@
-import { literal, object, string, type InferOutput } from 'valibot';
+import { type InferOutput, literal, object, string } from 'valibot';
 
 export const ErrorResponseSchema = object({
-  status: literal(400),
-  message: string(),
+    status: literal(400),
+    message: string(),
 });
 
 export type ErrorResponse = InferOutput<typeof ErrorResponseSchema>;

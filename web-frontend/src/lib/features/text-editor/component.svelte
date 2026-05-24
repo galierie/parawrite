@@ -7,13 +7,14 @@
     import { onDestroy, onMount } from 'svelte';
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
 
-    import { CtrlKLink, setLink, SynonymGroupNode } from './extensions';
-    
+    import { CtrlKLink, SynonymGroupNode, setLink } from './extensions';
+
     interface Props {
         edState: EditorState;
         view: EditorView;
     }
 
+    // eslint-disable-next-line no-useless-assignment -- for outputting editor stuff
     let { edState = $bindable(), view = $bindable() }: Props = $props();
 
     let editorState: { editor: Editor | null } = $state({ editor: null });
@@ -67,9 +68,12 @@
             },
             onUpdate({ editor }) {
                 // No initial content naman, so this should work
+
+                /* eslint-disable prefer-destructuring -- no */
                 edState = editor.state;
                 view = editor.view;
-            }
+                /* eslint-enable prefer-destructuring */
+            },
         });
     }
 

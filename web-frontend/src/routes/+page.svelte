@@ -1,12 +1,13 @@
 <script lang="ts">
     import { EditorState } from '@tiptap/pm/state';
     import { EditorView } from '@tiptap/pm/view';
-    import { TextEditorComponent } from '$lib/features/text-editor';
     import { onDestroy, onMount } from 'svelte';
-    import { ResponseSchema, type Response } from '$lib/models';
     import { parse } from 'valibot';
-    import { PUBLIC_API_URL } from '$env/static/public';
+
     import { getSynonymGroups } from '$lib/features/text-editor/extensions';
+    import { PUBLIC_API_URL } from '$env/static/public';
+    import { type Response, ResponseSchema } from '$lib/models';
+    import { TextEditorComponent } from '$lib/features/text-editor';
 
     let edState: EditorState = $state({} as EditorState);
     let view: EditorView = $state({} as EditorView);
@@ -28,13 +29,13 @@
                 const data: Response = parse(ResponseSchema, JSON.parse(ev.data));
 
                 if (data.status === 200) {
-                    const tr = edState.tr;
-        
+                    const { tr } = edState;
+
                     // For each group,
                     data.synonym_group_results.forEach(({ id, results }) => {
                         // Map each word to their score and reason
-                        let scores: Record<string, number> = {};
-                        let reasons: Record<string, string> = {};
+                        const scores: Record<string, number> = {};
+                        const reasons: Record<string, string> = {};
                         results.forEach(({ word, score, reason }) => {
                             scores[word] = score;
                             reasons[word] = reason;
@@ -44,12 +45,14 @@
                         // Bahala na si SynonymGroupNode to convert these into UI
                         edState.doc.descendants((node, pos) => {
                             // Look for the node with the group.id
-                            if (
-                                node.type.name === 'synonymGroup' &&
-                                node.attrs.id === id
-                            ) {
+                            if (node.type.name === 'synonymGroup' && node.attrs.id === id) {
                                 // Fill-in data-scores and data-reasons
-                                tr.setNodeMarkup(pos, undefined, { ...node.attrs, scores, reasons },);
+                                // eslint-disable-next-line no-undefined -- needed for function
+                                tr.setNodeMarkup(pos, undefined, {
+                                    ...node.attrs,
+                                    scores,
+                                    reasons,
+                                });
                                 return false;
                             }
 
@@ -57,14 +60,14 @@
                         });
                     });
 
-                    if (tr.docChanged) {
-                        view.dispatch(tr);
-                    }
+                    if (tr.docChanged) view.dispatch(tr);
                 } else {
                     throw Error(`${data.status}: ${data.message}`);
                 }
             } catch (err) {
-                console.error(`WebSocket error: ${(err instanceof Error) ? err.message : 'Unknown error'}`);
+                console.error(
+                    `WebSocket error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                );
             }
         };
 
@@ -80,10 +83,12 @@
     function sendToModel() {
         if (ws !== null && ws.OPEN) {
             const { synonymGroups, finalText } = getSynonymGroups(edState.doc);
-            ws.send(JSON.stringify({
-                synonym_groups: synonymGroups,
-                text: finalText,
-            }));
+            ws.send(
+                JSON.stringify({
+                    synonym_groups: synonymGroups,
+                    text: finalText,
+                }),
+            );
         }
     }
 
