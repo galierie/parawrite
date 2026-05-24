@@ -124,4 +124,38 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
       0,
     ];
   },
-})
+});
+
+/**
+ * Formats the synonym groups into lists.
+ */
+export function getSynonymGroups(doc: EditorState['doc']) {
+  const synonymGroups: Array<Array<string>> = [];
+  const finalText: Array<string> = [];
+
+  doc.descendants((node) => {
+    if (node.type.name === 'synonymGroup') {
+      const synonymGroupStr = node.textContent as string;
+
+      // Treat as text if invalid node
+      if (!synonymGroupStr.includes('|'))
+        finalText.push(synonymGroupStr);
+
+      const synonymGroup = synonymGroupStr
+        .split('|')
+        .map((word) => (word.trim()))
+        .filter(Boolean);
+
+      synonymGroups.push(synonymGroup);
+      finalText.push('[MASK]');
+
+      return false;
+    } else if (typeof node.text !== 'undefined') {
+      finalText.push(node.text);
+    }
+
+    return true;
+  });
+
+  return { synonymGroups, finalText: finalText.join(' ') };
+}

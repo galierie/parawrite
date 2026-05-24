@@ -1,8 +1,9 @@
 import { CtrlKLink, setLink } from './ctrl-k-link';
-import { SynonymGroupNode } from './synonym-group-node';
+import { getSynonymGroups, SynonymGroupNode } from './synonym-group-node';
 
 export {
   CtrlKLink,
+  getSynonymGroups,
   setLink,
   SynonymGroupNode,
 };
