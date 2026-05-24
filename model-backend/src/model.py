@@ -3,12 +3,20 @@ from transformers import PreTrainedModel, PreTrainedTokenizerFast
 import torch
 from torch.nn.functional import softmax
 
+class SynonymGroupRequest(BaseModel):
+    id: str
+    words: list[str]
+
 class WordResult(BaseModel):
     word: str
     score: float
     reason: str
 
-def recommend_by_batch(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, synonym_groups: list[list[str]], text: str) -> list[list[WordResult]]:
+class SynonymGroupResult(BaseModel):
+    id: str
+    results: list[WordResult]
+
+def recommend_by_batch(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, synonym_groups: list[SynonymGroupRequest], text: str) -> list[SynonymGroupResult]:
     input_tokens = tokenizer(text, return_tensors="pt")
 
     # Get [MASK] indexes in text
@@ -22,8 +30,8 @@ def recommend_by_batch(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFas
         model_output = model(**input_tokens)
         # TODO: Add reasoning
 
-    def get_synonym_group_probabilities(item: tuple[int, list[str]]):
-        idx, group = item
+    def get_synonym_group_probabilities(item: tuple[int, SynonymGroupRequest]):
+        idx, request = item
 
         # Convert the logits to probabilities for a specific [MASK]
         logits = model_output.logits[0, mask_text_indexes[idx, 1]]
@@ -31,7 +39,7 @@ def recommend_by_batch(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFas
 
         results: list[WordResult] = []
 
-        for word in group:
+        for word in request.words:
             word_token_arr: list[str] = tokenizer.tokenize(text=word) # type: ignore
             if len(word_token_arr) != 1:
                 print(f'Skipping scoring for word "{word}". Generated tokens: {word_token_arr}')
@@ -53,6 +61,6 @@ def recommend_by_batch(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFas
 
             results.append(WordResult(word=word, score=scores[word_token_id].item(), reason=''))
         
-        return results
+        return SynonymGroupResult(id=request.id, results=results)
 
     return list(map(get_synonym_group_probabilities, enumerate(synonym_groups)))

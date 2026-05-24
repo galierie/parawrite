@@ -2,16 +2,22 @@
     import Icon from '@iconify/svelte';
     import TextAlign from '@tiptap/extension-text-align';
     import { Editor } from '@tiptap/core';
+    import { EditorState } from '@tiptap/pm/state';
+    import { EditorView } from '@tiptap/pm/view';
     import { onDestroy, onMount } from 'svelte';
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
 
-    import { CtrlKLink, setLink } from './extensions/ctrl-k-link';
+    import { CtrlKLink, SynonymGroupNode, setLink } from './extensions';
 
-    interface EditorState {
-        editor: Editor | null;
+    interface Props {
+        edState: EditorState;
+        view: EditorView;
     }
 
-    let editorState: EditorState = $state({ editor: null });
+    // eslint-disable-next-line no-useless-assignment -- for outputting editor stuff
+    let { edState = $bindable(), view = $bindable() }: Props = $props();
+
+    let editorState: { editor: Editor | null } = $state({ editor: null });
     let editorElement: HTMLDivElement | null = $state(null);
 
     const starterKitExtensionsConfig: Partial<StarterKitOptions> = {
@@ -45,6 +51,11 @@
                     types: ['paragraph'],
                     defaultAlignment: 'left',
                 }),
+                SynonymGroupNode.configure({
+                    HTMLAttributes: {
+                        class: 'bg-grandis-100',
+                    },
+                }),
             ],
             editorProps: {
                 attributes: {
@@ -54,6 +65,14 @@
             onTransaction({ editor }) {
                 // Update the state signal to force a re-render
                 editorState = { editor };
+            },
+            onUpdate({ editor }) {
+                // No initial content naman, so this should work
+
+                /* eslint-disable prefer-destructuring -- no */
+                edState = editor.state;
+                view = editor.view;
+                /* eslint-enable prefer-destructuring */
             },
         });
     }
