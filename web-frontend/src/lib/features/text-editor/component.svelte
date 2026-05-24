@@ -8,7 +8,7 @@
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
     import UniqueID from '@tiptap/extension-unique-id';
 
-    import { CtrlKLink, SynonymGroupNode, setLink } from './extensions';
+    import { CtrlKLink, SynonymDecorator, SynonymGroupNode, setLink } from './extensions';
 
     interface Props {
         edState: EditorState;
@@ -54,7 +54,7 @@
                 }),
                 SynonymGroupNode.configure({
                     HTMLAttributes: {
-                        class: 'bg-grandis-100',
+                        class: 'bg-gray-400',
                     },
                 }),
                 UniqueID.configure({
@@ -62,6 +62,7 @@
                     attributeName: 'id',
                     generateID: () => (crypto.randomUUID()),
                 }),
+                SynonymDecorator,
             ],
             editorProps: {
                 attributes: {
