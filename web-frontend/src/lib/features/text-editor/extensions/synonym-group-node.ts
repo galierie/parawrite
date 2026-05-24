@@ -42,9 +42,8 @@ function replaceWithSynonymGroup({ state, range, match }: { state: EditorState, 
   const tr = state.tr;
   tr.replaceWith(range.from, range.to, node);
 
-  // Reinsert a space inside AND outside the node
+  // Escape via a space outside the node
   tr.insertText(' ', range.from + node.nodeSize);
-  tr.insertText(' ', range.from + node.nodeSize - 1);
 
   // Reinsert the missing whitespace as well
   if (range.from !== 1)
