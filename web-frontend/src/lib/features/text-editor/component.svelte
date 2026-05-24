@@ -5,7 +5,7 @@
     import { onDestroy, onMount } from 'svelte';
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
 
-    import { CtrlKLink, setLink } from './extensions';
+    import { CtrlKLink, setLink, SynonymGroupNode } from './extensions';
     
     interface Props {
         text: string;
@@ -51,6 +51,7 @@
                     types: ['paragraph'],
                     defaultAlignment: 'left',
                 }),
+                SynonymGroupNode,
             ],
             editorProps: {
                 attributes: {
