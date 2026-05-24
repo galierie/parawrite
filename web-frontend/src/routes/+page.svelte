@@ -2,9 +2,103 @@
     import { EditorState } from '@tiptap/pm/state';
     import { EditorView } from '@tiptap/pm/view';
     import { TextEditorComponent } from '$lib/features/text-editor';
+    import { onDestroy, onMount } from 'svelte';
+    import { ResponseSchema, type Response } from '$lib/models';
+    import { parse } from 'valibot';
+    import { PUBLIC_API_URL } from '$env/static/public';
+    import { getSynonymGroups } from '$lib/features/text-editor/extensions';
 
     let edState: EditorState = $state({} as EditorState);
     let view: EditorView = $state({} as EditorView);
+
+    let ws: WebSocket | null = $state(null);
+
+    function initWebSocket() {
+        if (ws !== null) ws.close();
+
+        ws = new WebSocket(`${PUBLIC_API_URL}/recommend`);
+
+        ws.onopen = () => {
+            console.log('WebSocket open!');
+        };
+
+        ws.onmessage = (ev) => {
+            // Receive results
+            try {
+                const data: Response = parse(ResponseSchema, JSON.parse(ev.data));
+
+                if (data.status === 200) {
+                    const tr = edState.tr;
+        
+                    // For each group,
+                    data.synonym_group_results.forEach(({ id, results }) => {
+                        // Map each word to their score and reason
+                        let scores: Record<string, number> = {};
+                        let reasons: Record<string, string> = {};
+                        results.forEach(({ word, score, reason }) => {
+                            scores[word] = score;
+                            reasons[word] = reason;
+                        });
+
+                        // Fill-in data-scores and data-reasons
+                        // Bahala na si SynonymGroupNode to convert these into UI
+                        edState.doc.descendants((node, pos) => {
+                            // Look for the node with the group.id
+                            if (
+                                node.type.name === 'synonymGroup' &&
+                                node.attrs.id === id
+                            ) {
+                                // Fill-in data-scores and data-reasons
+                                tr.setNodeMarkup(pos, undefined, { ...node.attrs, scores, reasons },);
+                                return false;
+                            }
+
+                            return true;
+                        });
+                    });
+
+                    if (tr.docChanged) {
+                        view.dispatch(tr);
+                    }
+                } else {
+                    throw Error(`${data.status}: ${data.message}`);
+                }
+            } catch (err) {
+                console.error(`WebSocket error: ${(err instanceof Error) ? err.message : 'Unknown error'}`);
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket closed.');
+        };
+
+        ws.onerror = (ev) => {
+            console.error('WebSocket error:', ev);
+        };
+    }
+
+    function sendToModel() {
+        if (ws !== null && ws.OPEN) {
+            const { synonymGroups, finalText } = getSynonymGroups(edState.doc);
+            ws.send(JSON.stringify({
+                synonym_groups: synonymGroups,
+                text: finalText,
+            }));
+        }
+    }
+
+    onMount(() => {
+        // Create WebSocket connection
+        initWebSocket();
+
+        // Every now and then, send data via the WebSocket
+        setInterval(sendToModel, 500);
+    });
+
+    onDestroy(() => {
+        // Destroy WebSocket connection
+        if (ws !== null) ws.close();
+    });
 </script>
 
 <div class="mb-24 text-center text-grandis-100">
