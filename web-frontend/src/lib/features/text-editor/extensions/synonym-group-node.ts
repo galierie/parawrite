@@ -11,20 +11,6 @@ type Score = InferOutput<typeof ScoreSchema>;
 const ReasonSchema = record(string(), number());
 type Reason = InferOutput<typeof ReasonSchema>;
 
-/**
- * SynonymGroupNode has two options:
- *   id: identifies which <span> contains the synonym group
- *   rankings: contains the results from the model API call
- */
-interface SynonymGroupOptions {
-  id: string;
-  scores: Score;
-  reasons: Reason;
-  HTMLAttributes: {
-    class?: string;
-  };
-}
-
 const synonymGroupPattern: RegExp = /([\w-]+(?:\|[\w-]+)+)/;
 function replaceWithSynonymGroup({ state, range, match }: { state: EditorState, range: Range, match: ExtendedRegExpMatchArray }) {
   if (range.from < 0) return;
@@ -57,9 +43,12 @@ function replaceWithSynonymGroup({ state, range, match }: { state: EditorState, 
 }
 
 /**
- * SynonymGroupNode contains the entire synonym group.
+ * SynonymGroupNode contains the entire synonym group and stores the following:
+ *   id: identifies which <span> contains the synonym group
+ *   scores: contains the scores from the model API call
+ *   reasons: contains the reasons from the model API call
  */
-export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
+export const SynonymGroupNode = Node.create({
   name: 'synonymGroup',
 
   group,
@@ -68,6 +57,34 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
   atom: false,
   content: 'text*',
   selectable: true,
+
+  addAttributes() {
+    return {
+      id: {
+        default: crypto.randomUUID(),
+        parseHTML: element => element.getAttribute('data-id'),
+        renderHTML: (attrs) => ({ 'data-id': attrs.id }),
+      },
+      scores: {
+        default: {},
+        parseHTML: element => {
+          const scoresStr = element.getAttribute('data-scores');
+          const scores = parse(ScoreSchema, JSON.parse(JSON.stringify(scoresStr)));
+          return scores;
+        },
+        renderHTML: (attrs) => ({ 'data-scores': JSON.stringify(attrs.scores) }),
+      },
+      reasons: {
+        default: {},
+        parseHTML: element => {
+          const reasonsStr = element.getAttribute('data-reasons');
+          const reasons = parse(ScoreSchema, JSON.parse(JSON.stringify(reasonsStr)));
+          return reasons;
+        },
+        renderHTML: (attrs) => ({ 'data-reasons': JSON.stringify(attrs.reasons) }),
+      },
+    };
+  },
 
   addInputRules() {
     return [
@@ -89,9 +106,6 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
 
   addOptions() {
     return {
-      id: crypto.randomUUID(),
-      scores: {},
-      reasons: {},
       HTMLAttributes: {},
     };
   },
@@ -100,21 +114,6 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
     return [
       {
         tag: `${tag}[data-synonym-group]`,
-        getAttrs: (element: HTMLSpanElement) => {
-          // Parse scores
-          const scoresStr = element.getAttribute('data-scores');
-          const scores = parse(ScoreSchema, JSON.parse(JSON.stringify(scoresStr)));
-
-          // Parse reasons
-          const reasonsStr = element.getAttribute('data-reasons');
-          const reasons = parse(ReasonSchema, JSON.parse(JSON.stringify(reasonsStr)));
-
-          return {
-            id: element.getAttribute('data-id'),
-            scores,
-            reasons,
-          }
-        }
       },
     ];
   },
@@ -127,9 +126,6 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
         this.options.HTMLAttributes,
         {
           'data-synonym-group': true,
-          'data-id': this.options.id,
-          'data-scores': JSON.stringify(this.options.scores),
-          'data-reasons': JSON.stringify(this.options.reasons),
         },
       ),
       0,
