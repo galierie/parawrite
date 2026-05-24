@@ -29,7 +29,7 @@
                 const data: Response = parse(ResponseSchema, JSON.parse(ev.data));
 
                 if (data.status === 200) {
-                    const { tr } = edState;
+                    const { selection, tr } = edState;
 
                     // For each group,
                     data.synonym_group_results.forEach(({ id, results }) => {
@@ -60,7 +60,13 @@
                         });
                     });
 
-                    if (tr.docChanged) view.dispatch(tr);
+                    if (tr.docChanged) {
+                        // Preserve current selection
+                        tr.setSelection(selection.map(tr.doc, tr.mapping));
+
+                        // Dispatch transaction
+                        view.dispatch(tr);
+                    }
                 } else {
                     throw Error(`${data.status}: ${data.message}`);
                 }
