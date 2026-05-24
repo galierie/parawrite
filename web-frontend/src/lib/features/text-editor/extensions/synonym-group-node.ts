@@ -1,20 +1,24 @@
-import { EditorState } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
 import {
     type ExtendedRegExpMatchArray,
+    Extension,
     InputRule,
     mergeAttributes,
     Node,
     PasteRule,
     type Range,
 } from '@tiptap/core';
-import { number, parse, record, string } from 'valibot';
+import { type InferOutput, number, parse, record, string } from 'valibot';
 
 const tag = 'span';
 const group = 'inline';
 
 const ScoreSchema = record(string(), number());
+type Score = InferOutput<typeof ScoreSchema>;
 
-const ReasonSchema = record(string(), number());
+const ReasonSchema = record(string(), string());
+type Reason = InferOutput<typeof ReasonSchema>;
 
 // eslint-disable-next-line prefer-named-capture-group -- no
 const synonymGroupPattern: RegExp = /([\w-]+(?:\|[\w-]+)+)/u;
@@ -72,7 +76,7 @@ export const SynonymGroupNode = Node.create({
     addAttributes() {
         return {
             id: {
-                default: crypto.randomUUID(),
+                default: null,
                 parseHTML: (element) => element.getAttribute('data-id'),
                 renderHTML: (attrs) => ({ 'data-id': attrs.id }),
             },
@@ -172,3 +176,82 @@ export function getSynonymGroups(doc: EditorState['doc']) {
 
     return { synonymGroups, finalText: finalText.join(' ') };
 }
+
+export const SynonymDecorator = Extension.create({
+    name: 'synonymDecorator',
+
+    addProseMirrorPlugins() {
+        return [
+            new Plugin({
+                key: new PluginKey('synonym-decorator'),
+                state: {
+                    init: (_, { doc }) => {
+                        return this.options.decorateSynonyms(doc);
+                    },
+                    apply: (tr, prev) => {
+                        return tr.docChanged
+                            ? this.options.decorateSynonyms(tr.doc)
+                            : prev.map(tr.mapping, tr.doc);
+                    },
+                },
+                props: {
+                    decorations(state) {
+                        return this.getState(state);
+                    },
+                },
+            }),
+        ];
+    },
+
+    addOptions() {
+        return {
+            decorateSynonyms(doc: EditorState['doc']) {
+                const decorations: Decoration[] = [];
+
+                doc.descendants((node, pos) => {
+                    if (node.type.name === 'synonymGroup') {
+                        const scores = node.attrs.scores as Score;
+                        const reasons = node.attrs.reasons as Reason;
+                        const text = node.textContent;
+
+                        // Get the highest score
+                        const highestScore = Math.max(...Object.values(scores));
+
+                        let posOffset = 0;
+
+                        text.split('|').forEach((rawStr) => {
+                            const word = rawStr.trim();
+
+                            // Get the synonym score
+                            const score = scores[word];
+                            if (score === null) return;
+
+                            // Get the synonym reason
+                            const reason = reasons[word];
+                            if (reason === null) return;
+
+                            // Highlight the entire string in the middle of two pipes
+                            const from = pos + 1 + posOffset;
+                            const to = from + rawStr.length;
+
+                            decorations.push(
+                                Decoration.inline(from, to, {
+                                    class: score === highestScore ? 'bg-my-sin' : 'bg-mandalay',
+                                    title: reason,
+                                }),
+                            );
+
+                            posOffset += rawStr.length + 1;
+                        });
+
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                return DecorationSet.create(doc, decorations);
+            },
+        };
+    },
+});

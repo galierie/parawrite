@@ -1,13 +1,14 @@
 <script lang="ts">
     import Icon from '@iconify/svelte';
     import TextAlign from '@tiptap/extension-text-align';
+    import UniqueID from '@tiptap/extension-unique-id';
     import { Editor } from '@tiptap/core';
     import { EditorState } from '@tiptap/pm/state';
     import { EditorView } from '@tiptap/pm/view';
     import { onDestroy, onMount } from 'svelte';
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
 
-    import { CtrlKLink, SynonymGroupNode, setLink } from './extensions';
+    import { CtrlKLink, SynonymDecorator, SynonymGroupNode, setLink } from './extensions';
 
     interface Props {
         edState: EditorState;
@@ -53,9 +54,15 @@
                 }),
                 SynonymGroupNode.configure({
                     HTMLAttributes: {
-                        class: 'bg-grandis-100',
+                        class: 'bg-gray-400',
                     },
                 }),
+                UniqueID.configure({
+                    types: ['synonymGroup'],
+                    attributeName: 'id',
+                    generateID: () => crypto.randomUUID(),
+                }),
+                SynonymDecorator,
             ],
             editorProps: {
                 attributes: {
