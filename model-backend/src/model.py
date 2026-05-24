@@ -40,20 +40,20 @@ def recommend_by_batch(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFas
         results: list[WordResult] = []
 
         for word in request.words:
-            word_token_arr: list[str] = tokenizer.tokenize(text=word) # type: ignore
-            if len(word_token_arr) != 1:
-                print(f'Skipping scoring for word "{word}". Generated tokens: {word_token_arr}')
-                results.append(WordResult(word=word, score=0, reason=''))
-                continue
+            # word_token_arr: list[str] = tokenizer.tokenize(text=word) # type: ignore
+            # if len(word_token_arr) != 1:
+            #     print(f'Skipping scoring for word "{word}". Generated tokens: {word_token_arr}')
+            #     results.append(WordResult(word=word, score=0, reason=''))
+            #     continue
 
-            word_token = word_token_arr[0]
-            if word_token == tokenizer.unk_token:
-                print(f'Skipping scoring for word "{word}". The word is somehow unknown to the model\'s vocabulary.')
-                results.append(WordResult(word=word, score=0, reason=''))
-                continue
+            # word_token = word_token_arr[0]
+            # if word_token == tokenizer.unk_token:
+            #     print(f'Skipping scoring for word "{word}". The word is somehow unknown to the model\'s vocabulary.')
+            #     results.append(WordResult(word=word, score=0, reason=''))
+            #     continue
 
             # Get the token ID from the model's entire vocabulary
-            word_token_id = tokenizer.convert_tokens_to_ids(word_token)
+            word_token_id = tokenizer.convert_tokens_to_ids(word)
             if isinstance(word_token_id, list):
                 print(f'Skipping scoring for word "{word}". Generated more than one token ID.')
                 results.append(WordResult(word=word, score=0, reason=''))
