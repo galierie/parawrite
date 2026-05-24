@@ -47,7 +47,11 @@
                     types: ['paragraph'],
                     defaultAlignment: 'left',
                 }),
-                SynonymGroupNode,
+                SynonymGroupNode.configure({
+                    HTMLAttributes: {
+                        class: 'bg-grandis-100',
+                    },
+                }),
             ],
             editorProps: {
                 attributes: {
