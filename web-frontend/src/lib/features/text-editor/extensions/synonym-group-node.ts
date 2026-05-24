@@ -1,4 +1,4 @@
-import { InputRule, mergeAttributes, Node, type ExtendedRegExpMatchArray, type Range } from '@tiptap/core';
+import { InputRule, mergeAttributes, Node, PasteRule, type ExtendedRegExpMatchArray, type Range } from '@tiptap/core';
 import { EditorState } from '@tiptap/pm/state';
 import { number, parse, record, string, type InferOutput } from 'valibot';
 
@@ -49,6 +49,15 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
     return [
       new InputRule({
         find: new RegExp(`/(?:^|\s)${synonymGroupPattern.source}\s$/`),
+        handler: replaceWithSynonymGroup,
+      }),
+    ];
+  },
+
+  addPasteRules() {
+    return [
+      new PasteRule({
+        find: new RegExp(`/${synonymGroupPattern.source}/`, 'g'),
         handler: replaceWithSynonymGroup,
       }),
     ];
