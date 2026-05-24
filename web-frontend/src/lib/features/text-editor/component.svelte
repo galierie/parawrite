@@ -2,16 +2,17 @@
     import Icon from '@iconify/svelte';
     import TextAlign from '@tiptap/extension-text-align';
     import { Editor } from '@tiptap/core';
+    import { EditorState } from '@tiptap/pm/state';
     import { onDestroy, onMount } from 'svelte';
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
 
     import { CtrlKLink, setLink, SynonymGroupNode } from './extensions';
     
     interface Props {
-        text: string;
+        doc: EditorState['doc'];
     }
 
-    let { text = $bindable() }: Props = $props();
+    let { doc = $bindable() }: Props = $props();
 
     let editorState: { editor: Editor | null } = $state({ editor: null });
     let editorElement: HTMLDivElement | null = $state(null);
@@ -64,7 +65,7 @@
             },
             onUpdate({ editor }) {
                 // No initial content naman, so this should work
-                text = editor.getText();
+                doc = editor.state.doc;
             }
         });
     }
