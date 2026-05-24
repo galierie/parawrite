@@ -5,7 +5,7 @@
     import { onDestroy, onMount } from 'svelte';
     import { StarterKit, type StarterKitOptions } from '@tiptap/starter-kit';
 
-    import { CtrlKLink, setLink } from './extensions/ctrl-k-link';
+    import { CtrlKLink, setLink } from './extensions';
     
     interface Props {
         text: string;
