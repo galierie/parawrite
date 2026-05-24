@@ -40,7 +40,7 @@ class RecommendResponse(GenericResponse):
     synonym_group_results: list[SynonymGroupResult]
 
 @app.websocket('/recommend')
-async def recommend(request: Request, websocket: WebSocket):
+async def recommend(websocket: WebSocket):
     await websocket.accept()
 
     try:
@@ -53,7 +53,7 @@ async def recommend(request: Request, websocket: WebSocket):
                 payload = RecommendRequest.model_validate_json(payload_json)
 
                 # Process payload
-                synonym_group_results: list[SynonymGroupResult] = recommend_by_batch(request.app.state.model, request.app.state.tokenizer, payload.synonym_groups, payload.text)
+                synonym_group_results: list[SynonymGroupResult] = recommend_by_batch(websocket.app.state.model, websocket.app.state.tokenizer, payload.synonym_groups, payload.text)
 
                 await websocket.send_json(
                     RecommendResponse(status=200, message='OK', synonym_group_results=synonym_group_results).model_dump()
