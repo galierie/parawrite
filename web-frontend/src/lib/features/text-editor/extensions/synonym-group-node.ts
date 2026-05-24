@@ -14,7 +14,7 @@ const group = 'inline';
 
 const ScoreSchema = record(string(), number());
 
-const ReasonSchema = record(string(), number());
+const ReasonSchema = record(string(), string());
 
 // eslint-disable-next-line prefer-named-capture-group -- no
 const synonymGroupPattern: RegExp = /([\w-]+(?:\|[\w-]+)+)/u;
