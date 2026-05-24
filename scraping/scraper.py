@@ -1,5 +1,6 @@
-# pip install requests beautifulsoup4 lxml
+# pip install requests aiohttp beautifulsoup4 lxml
 
+import asyncio
 import json
 import os
 import random
@@ -7,12 +8,13 @@ import re
 import time
 import html
 import requests
+import aiohttp
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 from typing import Callable, Literal
 
 # Types
-Site = Literal['Rappler', 'ABSCBN', 'GMA']
+Site = Literal['Rappler', 'ABSCBN', 'GMA', 'UPParserNew', 'UPParserOld']
 
 # Site Configuration
 
@@ -79,6 +81,9 @@ def _rappler_filter(url: str) -> bool:
         and url != "https://www.rappler.com/latest/"
     )
 
+def _upparser_old_filter(url: str) -> bool:
+    # WordPress post URLs contain a date segment: /YYYY/MM/DD/slug/
+    return bool(re.search(r'theupparser\.wordpress\.com/\d{4}/\d{2}/\d{2}/.+', url))
 def _abscbn_filter(url: str) -> bool:
     return (
         "www.abs-cbn.com" in url
@@ -161,6 +166,27 @@ SITE_CONFIGS: dict[str, SiteConfig] = {
         urls_file="gma_urls.txt",
         articles_file="gma_articles.jsonl",
         scraped_urls_file="gma_scraped_urls.txt",
+    ),
+    "UPParserNew": SiteConfig(
+        name="UPParserNew",
+        url_source="rss",
+        rss_feeds=["https://theupparser.pages.dev/api/rss.xml"],
+        title_selector="h1",
+        body_selector="main p",
+        urls_file="upparser_new_urls.txt",
+        articles_file="upparser_articles.jsonl",
+        scraped_urls_file="upparser_new_scraped_urls.txt",
+    ),
+    "UPParserOld": SiteConfig(
+        name="UPParserOld",
+        url_source="sitemap",
+        sitemap_urls=["https://theupparser.wordpress.com/sitemap.xml"],
+        url_filter=_upparser_old_filter,
+        title_selector="h1.entry-title",
+        body_selector=".entry-content p",
+        urls_file="upparser_old_urls.txt",
+        articles_file="upparser_articles.jsonl",
+        scraped_urls_file="upparser_old_scraped_urls.txt",
     ),
 }
 
@@ -461,20 +487,24 @@ def mark_url_as_scraped(config: SiteConfig, url: str) -> None:
 
 
 # Article scraping
-def scrape_article(url: str, config: SiteConfig) -> dict | None:
-    # Fetch and parse a single article page.
+async def scrape_article_async(session: aiohttp.ClientSession, url: str, config: SiteConfig) -> dict | None:
+    # Fetch and parse a single article page using an async HTTP session.
     print(f"Scraping: {url}")
     try:
-        response = requests.get(url, headers=DEFAULT_HEADERS, timeout=15, allow_redirects=True)
-    except requests.RequestException as e:
+        async with session.get(url, allow_redirects=True) as response:
+            if response.status != 200:
+                print(f"ERROR (HTTP {response.status}) — skipping")
+                return None
+            content = await response.read()
+            canonical_url = str(response.url)
+    except aiohttp.ClientError as e:
         print(f"ERROR (request): {e}")
         return None
-
-    if response.status_code != 200:
-        print(f"ERROR (HTTP {response.status_code}) — skipping")
+    except asyncio.TimeoutError:
+        print(f"ERROR (timeout): {url}")
         return None
 
-    soup = BeautifulSoup(response.content, "lxml")
+    soup = BeautifulSoup(content, "lxml")
 
     title_el = soup.select_one(config.title_selector)
     # Ensure HTML entities in the title (like &quot;) are unescaped
@@ -501,7 +531,7 @@ def scrape_article(url: str, config: SiteConfig) -> dict | None:
 
     # Fallback for dynamic sites (like ABS-CBN) where the body isn't in the HTML shell
     if len(body) < 50:
-        raw_html = response.text
+        raw_html = content.decode("utf-8", errors="replace")
         
         raw_html = re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), raw_html)
         raw_html = raw_html.replace('\\"', '"').replace('\\/', '/')
@@ -572,7 +602,6 @@ def scrape_article(url: str, config: SiteConfig) -> dict | None:
     body = body.replace('\u201c', "'").replace('\u201d', "'")  # Catch smart/curly quotes
     body = body.replace('\\', "")  # Catch any stray slashes
 
-    canonical_url = response.url
     print(f"DONE {title[:70]!r}")
     return {"url": canonical_url, "title": title, "body": body.strip()}
 
@@ -584,16 +613,20 @@ def _append_to_jsonl(filepath: str, articles: list[dict]) -> None:
             f.write(json.dumps(article, ensure_ascii=False) + "\n")
 
 # Main scraping
-def scrape_site(config: SiteConfig, n: int, request_delay: float = 0.75, max_discovery: int | None = None) -> int:
-    # Scrape up to n new articles from the given site.
+async def scrape_site_async(
+    config: SiteConfig,
+    n: int,
+    concurrency: int = 15,
+    max_discovery: int | None = None,
+) -> int:
+    # Scrape up to n new articles concurrently using aiohttp
     all_items = collect_all_urls(config, max_discovery=max_discovery)
     already_scraped = load_scraped_urls(config)
 
-    remaining = []
-    for item in all_items:
-        url_str = item["url"] if isinstance(item, dict) else item
-        if url_str not in already_scraped:
-            remaining.append(item)
+    remaining = [
+        item for item in all_items
+        if (item["url"] if isinstance(item, dict) else item) not in already_scraped
+    ]
 
     print(
         f"[{config.name}] {len(already_scraped):,} already visited | "
@@ -604,38 +637,61 @@ def scrape_site(config: SiteConfig, n: int, request_delay: float = 0.75, max_dis
         print(f"[{config.name}] Nothing left to scrape.")
         return 0
 
-    # For sitemap/rss sources, random sample
-    # For id_range, shuffle so we don't always start from the same IDs
-    sample = random.sample(remaining, min(n * 3, len(remaining))) \
-        if config.url_source == "id_range" \
+    # Over-sample 3× for id_range to absorb expected 404s; exact sample otherwise
+    sample = (
+        random.sample(remaining, min(n * 3, len(remaining)))
+        if config.url_source == "id_range"
         else random.sample(remaining, min(n, len(remaining)))
-    # For id_range we over-sample by 3× to account for 404s, stop once we hit n successes
+    )
 
-    print(f"[{config.name}] Starting scrape ...\n")
+    print(f"[{config.name}] Starting async scrape (concurrency={concurrency}) ...\n")
     success_count = 0
+    semaphore = asyncio.Semaphore(concurrency)
+    file_lock = asyncio.Lock()
+    counter_lock = asyncio.Lock()
+    stop_event = asyncio.Event()
 
-    for item in sample:
-        if success_count >= n:
-            break
-            
+    timeout = aiohttp.ClientTimeout(total=20)
+    connector = aiohttp.TCPConnector(limit=concurrency, ssl=False)
+    
+    async def process_item(session: aiohttp.ClientSession, item) -> None:
+        nonlocal success_count
+
+        if stop_event.is_set():
+            return
+
         url_str = item["url"] if isinstance(item, dict) else item
-        
-        if isinstance(item, dict):
-            article = item
-            print(f"Scraping: {url_str} (Bypassed page fetch via API)")
-            print(f"DONE {article['title'][:70]!r}")
-        else:
-            article = scrape_article(url_str, config)
-            
+
+        async with semaphore:
+            if stop_event.is_set():
+                return
+
+            if isinstance(item, dict):
+                # API-sourced item: content already available, skip page fetch
+                article = item
+                print(f"Scraping: {url_str} (via API)")
+                print(f"DONE {article['title'][:70]!r}")
+            else:
+                article = await scrape_article_async(session, url_str, config)
+
+        async with file_lock:
+            if article:
+                _append_to_jsonl(config.articles_file, [article])
+            # Mark visited regardless of success so 404s aren't retried
+            with open(config.scraped_urls_file, "a", encoding="utf-8") as f:
+                f.write(url_str + "\n")
+
         if article:
-            _append_to_jsonl(config.articles_file, [article])
-            success_count += 1
-            
-        mark_url_as_scraped(config, url_str)
-        
-        # Only pause if we actually made a network request
-        if not isinstance(item, dict):
-            time.sleep(request_delay)
+            async with counter_lock:
+                success_count += 1
+                if success_count >= n:
+                    stop_event.set()
+
+    async with aiohttp.ClientSession(
+        headers=DEFAULT_HEADERS, connector=connector, timeout=timeout
+    ) as session:
+        tasks = [asyncio.create_task(process_item(session, item)) for item in sample]
+        await asyncio.gather(*tasks)
 
     print(
         f"\n[{config.name}] Run complete — "
@@ -647,26 +703,36 @@ if __name__ == "__main__":
     # TODO: Change to True or False depending on if you want to only get a few articles
     TEST_MODE = False
 
-    TARGET_PER_SITE = 10 if TEST_MODE else 1000
+    TARGET_PER_SITE = 10 if TEST_MODE else 6000
     MAX_DISCOVERY = 2 if TEST_MODE else None
 
     SITES_TO_SCRAPE: list[Site] = [
-        "Rappler",
-        "ABSCBN",
+        # "Rappler",
+        # "ABSCBN",
         "GMA",
+        # "UPParserNew",
+        # "UPParserOld",
     ]
 
-    # Pause between HTTP requests. Raise to ~2.0 if 429 rate-limited
-    REQUEST_DELAY = 0.75
+    # Max simultaneous article page requests per site.
+    # TODO: Modify depending on how well scraping goes
+    CONCURRENCY = 5 if TEST_MODE else 20
 
-    total = 0
-    for site in SITES_TO_SCRAPE:
-        config = SITE_CONFIGS[site]
+    async def run_all():
+        total = 0
+        for site in SITES_TO_SCRAPE:
+            config = SITE_CONFIGS[site]
+            print(f"\n{'═' * 20}")
+            print(f"  {config.name}  (target: {TARGET_PER_SITE:,} articles)")
+            print(f"{'═' * 20}")
+            total += await scrape_site_async(
+                config,
+                n=TARGET_PER_SITE,
+                concurrency=CONCURRENCY,
+                max_discovery=MAX_DISCOVERY,
+            )
         print(f"\n{'═' * 20}")
-        print(f"  {config.name}  (target: {TARGET_PER_SITE:,} articles)")
+        print(f"All done.  Total articles scraped this run: {total:,}")
         print(f"{'═' * 20}")
-        total += scrape_site(config, n=TARGET_PER_SITE, request_delay=REQUEST_DELAY, max_discovery=MAX_DISCOVERY)
 
-    print(f"\n{'═' * 20}")
-    print(f"All done.  Total articles scraped this run: {total:,}")
-    print(f"{'═' * 20}")
+    asyncio.run(run_all())
