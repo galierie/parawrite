@@ -20,16 +20,35 @@ interface SynonymGroupOptions {
 
 const synonymGroupPattern: RegExp = /([\w-]+(?:\|[\w-]+)+)/;
 function replaceWithSynonymGroup({ state, range, match }: { state: EditorState, range: Range, match: ExtendedRegExpMatchArray }) {
-  const content = match[1];
+  if (range.from < 0) return;
+
+  // Prevent refire
+  let hasGroup = false;
+  state.doc.nodesBetween(range.from, range.to, (node) => {
+    if (node.type.name === 'synonymGroup') {
+      hasGroup = true;
+      return false; // Stop iterating once found
+    }
+  });
+  if (hasGroup) return;
 
   // Make a node with the captured text
-  const node = state.schema.nodes.synonymGroupNode.create({}, state.schema.text(content));
+  const content = match[2] ?? match[1];
+  const node = state.schema.nodes.synonymGroup.create({}, state.schema.text(content));
+  
+  const tr = state.tr;
+  tr.replaceWith(range.from, range.to, node);
 
-  // Limit range to that of captured text
-  const from = range.to - content.length - 1;
-  const to = range.from + content.length;
+  // Reinsert a space inside AND outside the node
+  tr.insertText(' ', range.from + node.nodeSize);
+  tr.insertText(' ', range.from + node.nodeSize - 1);
 
-  state.tr.replaceRangeWith(from, to, node);
+  // Reinsert the missing whitespace as well
+  if (range.from !== 1) {
+    tr.insertText(' ', range.from);
+  }
+
+  return;
 }
 
 /**
@@ -48,7 +67,7 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
   addInputRules() {
     return [
       new InputRule({
-        find: new RegExp(`/(?:^|\s)${synonymGroupPattern.source}\s$/`),
+        find: new RegExp(`(^|\\s)${synonymGroupPattern.source}\\s$`),
         handler: replaceWithSynonymGroup,
       }),
     ];
@@ -57,7 +76,7 @@ export const SynonymGroupNode = Node.create<SynonymGroupOptions>({
   addPasteRules() {
     return [
       new PasteRule({
-        find: new RegExp(`/${synonymGroupPattern.source}/`, 'g'),
+        find: new RegExp(synonymGroupPattern.source, 'g'),
         handler: replaceWithSynonymGroup,
       }),
     ];
