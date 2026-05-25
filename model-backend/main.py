@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, WebSocketException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, WebSocketException, Depends
 from pydantic import BaseModel
 from transformers import AutoModelForMaskedLM, AutoTokenizer
+from sqlmodel import Session
 
-from src.model import SynonymGroupRequest, SynonymGroupResult, WordResult, recommend_by_batch
+from src.db import create_db_and_tables, db_init, Rating
+from src.model import SynonymGroupRequest, SynonymGroupResult, recommend_by_batch
 
-MODEL_PATH = '../model/ModernBERT-base-finetuned-all'
+MODEL_PATH = '../model/TinyBERT_General_4L_312D-finetuned-all'
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,6 +15,7 @@ async def lifespan(app: FastAPI):
     model.eval()
     app.state.model = model
     app.state.tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH) # type: ignore
+    create_db_and_tables()
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -77,3 +80,14 @@ async def recommend(websocket: WebSocket):
 
     except Exception as err:
         print(f'Generic Exception: {str(err)}')
+
+
+class RateRequest(BaseModel):
+    rating: int
+
+@app.post('/rate')
+async def rate(payload: RateRequest, db: Session = Depends(db_init)):
+    db.add(Rating(rating=payload.rating))
+    db.commit()
+
+    return GenericResponse(status=200, message='OK')
