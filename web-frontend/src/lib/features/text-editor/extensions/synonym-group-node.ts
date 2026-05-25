@@ -211,7 +211,11 @@ export const SynonymDecorator = Extension.create({
                 doc.descendants((node, pos) => {
                     if (node.type.name === 'synonymGroup') {
                         const scores = node.attrs.scores as Score;
+                        if (Object.keys(scores).length === 0) return false;
+
                         const reasons = node.attrs.reasons as Reason;
+                        if (Object.keys(reasons).length === 0) return false;
+
                         const text = node.textContent;
 
                         // Get the highest score
