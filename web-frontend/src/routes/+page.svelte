@@ -14,6 +14,9 @@
 
     let ws: WebSocket | null = $state(null);
 
+    let startTime: DOMHighResTimeStamp | null = $state(null);
+    let endTime: DOMHighResTimeStamp | null = $state(null);
+
     function initWebSocket() {
         if (ws !== null) ws.close();
 
@@ -66,6 +69,11 @@
 
                         // Dispatch transaction
                         view.dispatch(tr);
+
+                        if (startTime !== null) {
+                            endTime = performance.now();
+                            console.log(`Average Latency: ${(endTime - startTime) / 1000}`);
+                        }
                     }
                 } else {
                     throw Error(`${data.status}: ${data.message}`);
@@ -87,6 +95,7 @@
     }
 
     function sendToModel() {
+        startTime = performance.now();
         if (ws !== null && ws.OPEN) {
             const { synonymGroups, finalText } = getSynonymGroups(edState.doc);
             ws.send(
