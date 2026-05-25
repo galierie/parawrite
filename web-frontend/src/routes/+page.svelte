@@ -178,22 +178,22 @@
                         </label>
 
                         <label class="flex flex-col justify-center items-center">
-                            <input type="radio" name="rating" value="1" />
+                            <input type="radio" name="rating" value="2" />
                             <span>2</span>
                         </label>
 
                         <label class="flex flex-col justify-center items-center">
-                            <input type="radio" name="rating" value="1" />
+                            <input type="radio" name="rating" value="3" />
                             <span>3</span>
                         </label>
 
                         <label class="flex flex-col justify-center items-center">
-                            <input type="radio" name="rating" value="1" />
+                            <input type="radio" name="rating" value="4" />
                             <span>4</span>
                         </label>
 
                         <label class="flex flex-col justify-center items-center">
-                            <input type="radio" name="rating" value="1" />
+                            <input type="radio" name="rating" value="5" />
                             <span>5 (Wow it's great)</span>
                         </label>
                     </div>
